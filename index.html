@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>McLeodganj → Shillong · 3D Trip Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b18; --bg-2:#0d1430; --ink:#eef1fb; --muted:#aab4d2; --line:rgba(255,255,255,.12);
+  --glass:rgba(16,22,48,.62); --glass-strong:rgba(14,19,42,.86);
+  --taxi:#f6c453; --bus:#4fd1c5; --train:#b39dff; --accent:#ff7a59; --good:#5ee2a0;
+  --r:18px; --ease:cubic-bezier(.22,1,.36,1); --dur:.6s;
+  --z-canvas:0; --z-label:5; --z-ui:10; --z-panel:12; --z-modal:30;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+::selection{background:var(--accent);color:#111}
+button{font:inherit;color:inherit}
+#stage{position:fixed;inset:0;z-index:var(--z-canvas);background:radial-gradient(1200px 800px at 35% 30%,#16224d 0%,var(--bg) 60%)}
+#stage canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#stage canvas:active{cursor:grabbing}
+.grain{position:fixed;inset:0;pointer-events:none;z-index:var(--z-label);opacity:.06;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:var(--z-label);overflow:hidden}
+.lbl{position:absolute;left:0;top:0;white-space:nowrap;font:600 12px/1 "Space Grotesk",sans-serif;letter-spacing:.02em;
+  padding:6px 9px;border-radius:999px;background:rgba(7,11,24,.72);border:1px solid var(--line);backdrop-filter:blur(6px);
+  transform:translate(-50%,-140%);transition:opacity .3s}
+.lbl.on{border-color:rgba(255,255,255,.45);background:rgba(20,28,60,.9)}
+.lbl.dim{opacity:.35}
+.veh{position:absolute;left:0;top:0;font-size:24px;transform:translate(-50%,-115%);filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));transition:opacity .3s}
+
+/* glass */
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border-radius:var(--r)}
+
+header.top{position:fixed;top:14px;left:14px;right:410px;z-index:var(--z-ui);display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px}
+.brand{margin-right:auto;min-width:220px}
+.brand h1{margin:0;font:700 clamp(17px,2vw,22px)/1.1 "Space Grotesk",sans-serif;letter-spacing:-.01em}
+.brand h1 span{background:linear-gradient(90deg,var(--taxi),var(--accent),var(--train));-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:12.5px}
+.seg{display:inline-flex;padding:4px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.seg button{border:0;background:transparent;padding:8px 12px;min-height:36px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:background var(--dur) var(--ease),color .3s}
+.seg button[aria-pressed="true"],.seg button[aria-selected="true"]{background:var(--ink);color:#0b1020}
+.seg button:focus-visible,.btn:focus-visible,.card:focus-visible{outline:2px solid var(--taxi);outline-offset:2px}
+.seglbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 8px 0 10px;align-self:center}
+.seg.off{opacity:.45}.seg.off button{cursor:not-allowed}
+#routeTabs{max-width:100%;overflow-x:auto;scrollbar-width:none}#routeTabs::-webkit-scrollbar{display:none}
+#routeTabs button{white-space:nowrap}
+.est{font-size:10px;font-weight:700;color:var(--accent);margin-left:4px;letter-spacing:.06em}
+.tag{font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:999px;margin-left:6px;background:rgba(94,226,160,.18);color:var(--good)}
+.seg button[aria-selected="true"] .tag{background:#0b1020;color:var(--good)}
+
+/* panel */
+aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:var(--z-panel);display:flex;flex-direction:column;overflow:hidden;background:var(--glass-strong)}
+.panel-head{padding:16px 18px 10px;border-bottom:1px solid var(--line)}
+.panel-head .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.total{font:700 34px/1.05 "Space Grotesk",sans-serif;margin-top:4px;font-variant-numeric:tabular-nums}
+.total small{font:500 13px Inter;color:var(--muted);margin-left:6px}
+.rail{height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
+.rail i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--taxi),var(--bus),var(--train));transition:width .8s var(--ease)}
+.scroller{flex:1;overflow-y:auto;scroll-snap-type:y mandatory;padding:14px 14px 40vh;scroll-behavior:smooth;overscroll-behavior:contain}
+.scroller::-webkit-scrollbar{width:6px}.scroller::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:6px}
+.card{scroll-snap-align:center;position:relative;padding:18px;margin-bottom:14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);cursor:pointer;
+  opacity:.5;transform:scale(.97);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease),border-color .4s,background .4s}
+.card.active{opacity:1;transform:none;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.07)}
+.card .num{position:absolute;right:14px;top:6px;font:700 64px/1 "Space Grotesk";color:rgba(255,255,255,.05);pointer-events:none}
+.card h2{margin:0 0 6px;font:700 18px/1.2 "Space Grotesk",sans-serif}
+.card p{margin:6px 0;color:var(--muted);font-size:13.5px;line-height:1.5}
+.mode{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.07);margin-bottom:10px}
+.mode .dot{width:8px;height:8px;border-radius:50%}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 6px}
+.stat{padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+.stat b{display:block;font:700 20px "Space Grotesk";font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.word{display:inline-block;opacity:0;transform:translateY(10px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.card.active .word{opacity:1;transform:none}
+.bars{margin-top:12px;display:grid;gap:10px}
+.bar{font-size:13px}
+.bar .row{display:flex;justify-content:space-between;margin-bottom:5px}
+.bar .track{height:10px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar .fill{height:100%;width:0;border-radius:6px;transition:width 1s var(--ease)}
+.card.active .bar .fill{width:var(--w)}
+.note{font-size:12px;color:var(--muted);border-left:2px solid var(--accent);padding-left:10px;margin-top:10px}
+.src{font-size:11.5px;color:var(--muted);line-height:1.6}
+.src a{color:var(--ink)}
+.hint{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;margin-top:10px}
+.mouse{width:16px;height:24px;border:2px solid var(--muted);border-radius:10px;position:relative}
+.mouse:after{content:"";position:absolute;left:50%;top:4px;width:2px;height:5px;background:var(--muted);border-radius:2px;transform:translateX(-50%);animation:wheel 1.6s infinite}
+@keyframes wheel{0%{opacity:1;top:4px}100%{opacity:0;top:12px}}
+
+/* hud */
+.hud{position:fixed;left:14px;bottom:14px;z-index:var(--z-ui);display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.ctrls{display:flex;gap:6px;padding:6px}
+.btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);cursor:pointer;display:grid;place-items:center;font-size:18px;transition:transform .25s var(--ease),background .3s}
+.btn:hover{background:rgba(255,255,255,.14)}
+.btn[aria-pressed="true"]{background:var(--ink);color:#0b1020}
+#music[aria-pressed="true"]{animation:beat 2.4s ease-in-out infinite}
+@keyframes beat{50%{box-shadow:0 0 0 6px rgba(246,196,83,.18)}}
+.legend{display:flex;gap:12px;padding:10px 14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.disclaim{font-size:11px;color:var(--muted);opacity:.8}
+
+#nowebgl{display:none;position:fixed;left:14px;top:50%;max-width:340px;padding:16px;z-index:var(--z-ui)}
+.no-webgl #nowebgl{display:block}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+#preload{position:fixed;inset:0;z-index:var(--z-modal);display:grid;place-items:center;background:var(--bg);transition:opacity .8s var(--ease),visibility .8s}
+#preload.gone{opacity:0;visibility:hidden}
+#preload .ring{width:58px;height:58px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:var(--taxi);animation:spin 1s linear infinite}
+#preload p{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-width:900px){
+  header.top{right:14px;top:10px;left:10px;right:10px;padding:10px}
+  .brand{min-width:0;width:100%}
+  aside.panel{top:auto;left:10px;right:10px;bottom:10px;width:auto;height:44vh}
+  .panel-head{padding:10px 14px 8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .total{font-size:24px;margin:0}
+  .rail{flex-basis:100%;margin-top:4px}
+  .scroller{padding-bottom:30vh}
+  .hud{bottom:calc(44vh + 20px);left:10px}
+  .legend,.disclaim{display:none}
+  .ctrls{flex-direction:row}
+}
+@media (max-width:420px){.seg button{padding:7px 9px;font-size:12px}.brand p{display:none}.btn{width:38px;height:38px;font-size:16px}.ctrls{gap:4px;padding:4px;flex-wrap:wrap;max-width:calc(100vw - 20px)}.seglbl{padding:0 4px 0 6px}}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .word{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div id="preload" aria-hidden="true"><div><div class="ring" style="margin:auto"></div><p>Unfolding the map…</p></div></div>
+
+<div id="stage" aria-hidden="true"></div>
+<div id="labels" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top glass">
+  <div class="brand">
+    <h1><span>McLeodganj → Shillong</span></h1>
+    <p>Return trip planner · train, bus or flight · drag to orbit, scroll or pinch to zoom</p>
+  </div>
+  <div class="seg" role="tablist" aria-label="Choose route" id="routeTabs"></div>
+  <div class="seg" role="group" aria-label="Train class" id="clsSeg">
+    <span class="seglbl" aria-hidden="true">🚆 Train class</span>
+    <button data-cls="sl" aria-pressed="true" aria-label="Train: Sleeper class">Sleeper</button>
+    <button data-cls="ac" aria-pressed="false" aria-label="Train: 3AC class">3AC</button>
+  </div>
+  <div class="seg" role="group" aria-label="Trip type" id="tripSeg">
+    <button data-trip="one" aria-pressed="false">One way</button>
+    <button data-trip="ret" aria-pressed="true">Return</button>
+  </div>
+</header>
+
+<aside class="panel glass" aria-label="Trip steps">
+  <div class="panel-head">
+    <div class="k" id="totalLabel">Return total · Sleeper</div>
+    <div class="total" id="total">₹0</div>
+    <div class="rail" aria-hidden="true"><i id="railFill"></i></div>
+  </div>
+  <div class="scroller" id="scroller" tabindex="0" aria-label="Scroll through the journey"></div>
+</aside>
+
+<div class="hud">
+  <div class="ctrls glass" role="toolbar" aria-label="Map controls">
+    <button class="btn" id="zin" aria-label="Zoom in" title="Zoom in (+)">＋</button>
+    <button class="btn" id="zout" aria-label="Zoom out" title="Zoom out (−)">－</button>
+    <button class="btn" id="reset" aria-label="Reset view" title="Reset view (0)">⌂</button>
+    <button class="btn" id="spin" aria-label="Auto rotate" aria-pressed="false" title="Auto rotate">⟳</button>
+    <button class="btn" id="play" aria-label="Play guided tour" aria-pressed="false" title="Play tour (space)">▶</button>
+    <button class="btn" id="music" aria-label="Ambient music" aria-pressed="false" title="Ambient music (M)">♪</button>
+    <button class="btn" id="prev" aria-label="Previous step" title="Previous (←)">‹</button>
+    <button class="btn" id="next" aria-label="Next step" title="Next (→)">›</button>
+  </div>
+  <div class="legend glass">
+    <span><i style="background:var(--taxi)"></i>Shared taxi / Sumo</span>
+    <span><i style="background:var(--bus)"></i>Bus</span>
+    <span><i style="background:var(--train)"></i>Train</span>
+    <span><i style="background:var(--accent)"></i>Flight</span>
+    <span class="disclaim">Map stylised · not to scale</span>
+  </div>
+</div>
+
+<div id="nowebgl" class="glass"><b>3D map unavailable.</b><p style="color:var(--muted);font-size:13px">Your browser couldn't start WebGL. The step-by-step guide and all costs still work in the panel.</p></div>
+<div class="sr" aria-live="polite" id="live"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(() => {
+/* ---------------- data ---------------- */
+const CITIES = {
+  mcl:{name:'McLeodganj',lon:76.32,lat:32.245,dx:-48,dy:-6},
+  dsh:{name:'Dharamshala bus stand',lon:76.322,lat:32.21,dx:70,dy:22},
+  dhm:{name:'Gaggal Airport (DHM)',lon:76.26,lat:32.165,dx:-60,dy:30},
+  ptk:{name:'Pathankot',lon:75.65,lat:32.27},
+  amb:{name:'Amb Andaura',lon:76.05,lat:31.68},
+  umb:{name:'Ambala Cantt',lon:76.78,lat:30.38},
+  del:{name:'Delhi',lon:77.21,lat:28.64},
+  dela:{name:'Delhi Airport (DEL)',lon:77.10,lat:28.56},
+  gkp:{name:'Gorakhpur',lon:83.37,lat:26.76},
+  slg:{name:'Siliguri',lon:88.43,lat:26.72},
+  ghy:{name:'Guwahati',lon:91.75,lat:26.18},
+  gau:{name:'Guwahati Airport (GAU)',lon:91.59,lat:26.11,dx:-40,dy:30},
+  shl:{name:'Shillong',lon:91.88,lat:25.57,dx:0,dy:44}
+};
+const MODES = {
+  taxi:{icon:'🚕',label:'Shared taxi',color:'#f6c453'},
+  bus:{icon:'🚌',label:'Bus',color:'#4fd1c5'},
+  train:{icon:'🚆',label:'Train',color:'#b39dff'},
+  sumo:{icon:'🚙',label:'Shared Sumo',color:'#f6c453'},
+  flight:{icon:'✈️',label:'Flight',color:'#ff7a59'}
+};
+// rail & road waypoints so ground legs hug the land
+const W = {
+  ptk_umb:[[75.58,31.33],[75.85,30.9],[76.4,30.62]],
+  umb_ghy:[[77.55,29.96],[78.77,28.84],[79.43,28.37],[80.95,26.85],[81.96,27.13],[83.37,26.76],[84.9,26.2],[86.4,25.6],[87.58,25.54],[87.95,26.1],[88.69,26.68],[89.9,26.45],[90.56,26.48],[91.63,26.45]],
+  del_ghy:[[78.08,27.88],[78.24,27.21],[79.02,26.78],[80.33,26.45],[81.85,25.44],[83.12,25.28],[83.98,25.56],[85.14,25.6],[86.5,25.4],[87.58,25.54],[87.95,26.1],[88.69,26.68],[89.9,26.45],[90.56,26.48],[91.63,26.45]],
+  amb_umb:[[76.27,31.47],[76.38,31.39],[76.53,30.97],[76.7,30.65]],
+  dsh_ptk:[[76.27,32.1],[75.89,32.3]],
+  dsh_del:[[76.27,32.1],[76.27,31.47],[76.53,30.97],[76.78,30.38],[76.99,29.69],[76.97,29.39],[77.1,28.9]],
+  dsh_amb:[[76.27,32.1],[76.08,31.88]],
+  del_slg:[[78.4,27.6],[79.6,27.0],[80.95,26.85],[82.2,26.8]],
+  slg_ghy:[[89.4,26.5],[90.56,26.48],[91.2,26.3]],
+  gkp_slg:[[84.6,26.4],[85.39,26.12],[86.6,25.9],[87.47,25.78],[88.1,26.2]],
+  ghy_shl:[[91.85,26.05],[91.88,25.9],[91.89,25.66]],
+  gau_shl:[[91.7,26.12],[91.85,26.05],[91.88,25.9],[91.89,25.66]],
+  mcl_dhm:[[76.3,32.2]]
+};
+const TAXI = {from:'mcl',to:'dsh',mode:'taxi',title:'McLeodganj → Dharamshala bus stand',sl:100,dur:'~30 min',note:'Your fixed figure for the shared taxi down the hill.'};
+const SUMO = {from:'ghy',to:'shl',mode:'sumo',title:'Guwahati → Shillong',sl:300,dur:'~3 h',via:W.ghy_shl,note:'Shared Sumo ₹250–350 per seat from Paltan Bazar, right next to the station. A shared small car (Dzire/Alto) is ₹400–600.'};
+const TRAIN_UMB_GHY = {from:'umb',to:'ghy',mode:'train',title:'Ambala → Guwahati',sl:825,ac:2110,dur:'~40½ h',via:W.umb_ghy,note:'Amarnath Express 15654 — the same weekly train as the Pathankot route. Runs east across the plains via Lucknow, Gorakhpur and New Jalpaiguri.'};
+const ROUTES = {
+  ptk:{name:'Train via Pathankot',tag:'Cheapest',legs:[
+    TAXI,
+    {from:'dsh',to:'ptk',mode:'bus',title:'Dharamshala → Pathankot',sl:250,dur:'~3–3½ h',via:W.dsh_ptk,note:'HRTC ordinary bus from ~₹213. AC Volvo options go up to ~₹986.'},
+    {from:'ptk',to:'ghy',mode:'train',title:'Pathankot → Guwahati',sl:830,ac:2015,dur:'~45½ h',via:[[75.58,31.33],[75.85,30.9],[76.78,30.38],...W.umb_ghy],note:'Lohit Express 15652 (dep. 00:35, Thu) or Amarnath Express 15654 (Fri). Weekly trains — plan your dates around them. Runs via Jalandhar, Ambala, Lucknow, Gorakhpur and New Jalpaiguri.'},
+    SUMO]},
+  del:{name:'Train via Delhi',tag:'Daily trains',legs:[
+    TAXI,
+    {from:'dsh',to:'del',mode:'bus',title:'Dharamshala → Delhi',sl:740,dur:'~11–13 h',via:W.dsh_del,note:'HRTC ordinary seater ₹739. The HRTC Himsuta AC Volvo is ~₹1,501 if you want comfort. Local metro/auto to the train station not included.'},
+    {from:'del',to:'ghy',mode:'train',title:'Delhi → Guwahati',sl:825,ac:2060,dur:'~32½ h',via:W.del_ghy,note:'North East Express 12506 (Anand Vihar → Kamakhya), daily, via Kanpur, Prayagraj, Patna and New Jalpaiguri. Brahmaputra Mail and Avadh Assam Express are other daily options.'},
+    SUMO]},
+  amb:{name:'Train via Amb Andaura',legs:[
+    TAXI,
+    {from:'dsh',to:'amb',mode:'bus',title:'Dharamshala → Amb',sl:249,dur:'~3 h',via:W.dsh_amb,note:'Lowest listed fare on this route.'},
+    {from:'amb',to:'umb',mode:'train',title:'Amb Andaura → Ambala Cantt',sl:150,ac:520,dur:'~4 h',via:W.amb_umb,note:'Himachal Express 14053, daily, via Una, Nangal and Rupnagar. There is no direct train from Amb Andaura to Guwahati, so you change at Ambala.'},
+    TRAIN_UMB_GHY,
+    SUMO]},
+  bus:{name:'All by bus',legs:[
+    TAXI,
+    {from:'dsh',to:'del',mode:'bus',title:'Dharamshala → Delhi',sl:740,dur:'~11–13 h',via:W.dsh_del,note:'HRTC ordinary seater ₹739, or the HRTC Himsuta AC Volvo at ~₹1,501.'},
+    {from:'del',to:'gkp',mode:'bus',title:'Delhi → Gorakhpur → Siliguri',sl:1700,est:true,dur:'~1½ days',via:[...W.del_slg,[83.37,26.76],...W.gkp_slg].slice(0,-1),to2:'slg',note:'No through bus to the Northeast: you chain connecting buses via Gorakhpur to Siliguri. Delhi → Guwahati by connecting buses is listed at ₹2,400–3,300 in total; this leg is the Delhi → Siliguri share of that (estimate).'},
+    {from:'slg',to:'ghy',mode:'bus',title:'Siliguri → Guwahati',sl:700,dur:'~10–12 h',via:W.slg_ghy,note:'Overnight buses from ₹700 (non-AC); AC sleepers are ₹900–1,600.'},
+    {from:'ghy',to:'shl',mode:'bus',title:'Guwahati → Shillong',sl:250,dur:'~4 h',via:W.ghy_shl,note:'ASTC / Meghalaya state bus ~₹250. Or a shared Sumo at ₹250–350.'}]},
+  fly:{name:'Fly',tag:'Fastest',legs:[
+    {from:'mcl',to:'dhm',mode:'taxi',title:'McLeodganj → Gaggal Airport',sl:500,est:true,dur:'~45 min',via:W.mcl_dhm,note:'Gaggal (Kangra) Airport is ~15 km from Dharamshala. I found no listed fare, so this is an estimate for a taxi. A shared taxi plus a local bus will cost less.'},
+    {from:'dhm',to:'dela',mode:'flight',title:'Dharamshala → Delhi',sl:4575,dur:'~1 h 20 min',note:'Direct IndiGo / SpiceJet / Alliance Air flights. Cheapest listed fare seen ~₹4,575. Gaggal flights are few and weather-sensitive.'},
+    {from:'dela',to:'gau',mode:'flight',title:'Delhi → Guwahati',sl:5715,dur:'~2 h 45 min',note:'Cheapest one-way seen ₹5,715; typical ₹6,441–7,893. Direct Delhi → Shillong (Umroi) flights exist from ~₹7,135 (typical ~₹12,600), plus a ~₹750 cab from Umroi into town.'},
+    {from:'gau',to:'shl',mode:'sumo',title:'Guwahati Airport → Shillong',sl:500,dur:'~3–3½ h',via:W.gau_shl,note:'Shared Sumo from the airport ₹400–600 per person; ASTC bus ₹250–350; pre-paid taxi ₹2,500–3,500.'}]}
+};
+// leg with to2 means the visible endpoint is to2 (passes through `to`)
+ROUTES.bus.legs[2].via=[...W.del_slg,[83.37,26.76],...W.gkp_slg];ROUTES.bus.legs[2].to='slg';ROUTES.bus.legs[2].mid='gkp';
+const hasTrain = rk => ROUTES[rk].legs.some(l=>l.mode==='train');
+const state = {route:'ptk',cls:'sl',trip:'ret',step:0};
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const legCost = (l,cls=state.cls) => (cls==='ac' && l.ac) ? l.ac : l.sl;
+const total = (rk,cls=state.cls,trip=state.trip) => ROUTES[rk].legs.reduce((s,l)=>s+legCost(l,cls),0)*(trip==='ret'?2:1);
+const hasGsap = !!window.gsap;
+const tween = (obj,props) => { if(hasGsap && !reduced()) return gsap.to(obj,props); Object.assign(obj,props); props.onUpdate&&props.onUpdate(); props.onComplete&&props.onComplete(); };
+
+/* ---------------- UI build ---------------- */
+const tabs = document.getElementById('routeTabs');
+Object.entries(ROUTES).forEach(([k,r])=>{
+  const b=document.createElement('button');b.setAttribute('role','tab');b.dataset.route=k;
+  b.innerHTML=`${r.name}${r.tag?`<span class="tag">${r.tag}</span>`:''}`;
+  b.addEventListener('click',()=>setRoute(k));tabs.appendChild(b);
+});
+document.querySelectorAll('#clsSeg button').forEach(b=>b.onclick=()=>{if(!hasTrain(state.route))return;state.cls=b.dataset.cls;syncToggles();renderPanel(true);});
+document.querySelectorAll('#tripSeg button').forEach(b=>b.onclick=()=>{state.trip=b.dataset.trip;syncToggles();renderPanel(true);});
+function syncToggles(){
+  tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.route===state.route));
+  document.querySelectorAll('#clsSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cls===state.cls));
+  document.querySelectorAll('#tripSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.trip===state.trip));
+  const tr=hasTrain(state.route),seg=document.getElementById('clsSeg');
+  seg.classList.toggle('off',!tr);seg.title=tr?'':'No train on this route';
+  seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-disabled',!tr));
+  document.getElementById('totalLabel').textContent=`${state.trip==='ret'?'Return':'One-way'} total · ${tr?(state.cls==='ac'?'3AC train':'Sleeper train')+' · ':''}${ROUTES[state.route].name}`;
+  const t={v:parseInt(totalEl.dataset.v||0)};const target=total(state.route);
+  tween(t,{v:target,duration:1,ease:'power2.out',onUpdate:()=>{totalEl.textContent=fmt(t.v)}});
+  totalEl.dataset.v=target;
+}
+const totalEl=document.getElementById('total');
+const scroller=document.getElementById('scroller');
+const words = s => s.split(' ').map((w,i)=>`<span class="word" style="transition-delay:${i*35}ms">${w}</span>`).join(' ');
+
+function renderPanel(keep){
+  const r=ROUTES[state.route], mult=state.trip==='ret'?2:1;
+  const oneWay=total(state.route,state.cls,'one'),tr=hasTrain(state.route),clsName=state.cls==='ac'?'3AC':'sleeper';
+  let html=`<article class="card" data-step="0" tabindex="0">
+    <div class="num">00</div>
+    <h2>${words(r.name+' — the big picture')}</h2>
+    <p>${r.legs.length} legs, about ${fmt(oneWay)} one way${tr?` with the train in ${clsName} class`:''}. The return mirrors the outbound route, so the return trip costs ${fmt(oneWay*2)}.</p>
+    <div class="stats"><div class="stat"><span>One way</span><b>${fmt(oneWay)}</b></div><div class="stat"><span>Return</span><b>${fmt(oneWay*2)}</b></div></div>
+    <div class="hint"><span class="mouse"></span>Scroll this panel, or press → to start the journey</div>
+  </article>`;
+  r.legs.forEach((l,i)=>{
+    const m=MODES[l.mode],c=legCost(l);
+    html+=`<article class="card" data-step="${i+1}" tabindex="0">
+      <div class="num">0${i+1}</div>
+      <div class="mode"><span class="dot" style="background:${m.color}"></span>${m.icon} ${m.label}</div>
+      <h2>${words(l.title)}</h2>
+      <div class="stats">
+        <div class="stat"><span>${l.mode==='train'?`Train · ${state.cls==='ac'?'3AC':'Sleeper'}`:'Fare'}${mult>1?' ×2':''}${l.est?'<span class="est">EST.</span>':''}</span><b>${fmt(c*mult)}</b></div>
+        <div class="stat"><span>Duration</span><b>${l.dur}</b></div>
+      </div>
+      <p class="note">${l.note}</p>
+    </article>`;
+  });
+  const max=Math.max(...Object.keys(ROUTES).map(k=>total(k)));
+  const bars=Object.entries(ROUTES).sort((a,b)=>total(a[0])-total(b[0])).map(([k,rr],i)=>`
+    <div class="bar"><div class="row"><span>${rr.name}${k===state.route?' · selected':''}</span><b>${fmt(total(k))}</b></div>
+    <div class="track"><div class="fill" style="--w:${(total(k)/max*100).toFixed(1)}%;background:${i===0?'var(--good)':k===state.route?'var(--ink)':'rgba(255,255,255,.35)'};transition-delay:${i*120}ms"></div></div></div>`).join('');
+  html+=`<article class="card" data-step="${r.legs.length+1}" tabindex="0">
+    <div class="num">✓</div>
+    <h2>${words('Arrived in Shillong — compare routes')}</h2>
+    <p>${state.trip==='ret'?'Return':'One-way'} totals (train legs in ${state.cls==='ac'?'3AC':'sleeper class'}):</p>
+    <div class="bars">${bars}</div>
+    <p class="note">Train via Pathankot is cheapest, but its trains run only on certain days. Train via Delhi has daily trains. All-bus costs more and takes about 3 days. Flying gets you there in under a day, for several times the price. Fares marked EST. are estimates. All fares are base fares that change with date and season.</p>
+    <p class="src">Fares compiled Nov 2026 from EaseMyTrip, ixigo, erail, ConfirmTkt, Trekgo, Expedia, Kayak and HappyFares listings. <a href="https://www.irctc.co.in/nget/train-search">Check live fares on IRCTC</a> · <a href="https://online.hrtchp.com/oprs-web/guest/home.do?h=1">HRTC booking</a></p>
+  </article>`;
+  scroller.innerHTML=html;
+  scroller.querySelectorAll('.card').forEach(c=>{
+    c.addEventListener('click',()=>goToStep(+c.dataset.step,{scroll:true}));
+    c.addEventListener('keydown',e=>{if(e.key==='Enter'){goToStep(+c.dataset.step,{scroll:true})}});
+    io.observe(c);
+  });
+  if(keep) goToStep(Math.min(state.step,r.legs.length+1),{scroll:true,instant:true,force:true});
+}
+
+let lock=0;
+const io=new IntersectionObserver(es=>{
+  if(Date.now()<lock) return;
+  let best=null;es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>.6&&(!best||e.intersectionRatio>best.intersectionRatio))best=e});
+  if(best) goToStep(+best.target.dataset.step);
+},{root:scroller,threshold:[.6,.8,1]});
+
+function goToStep(n,{scroll=false,instant=false,force=false}={}){
+  const r=ROUTES[state.route],max=r.legs.length+1;
+  n=Math.max(0,Math.min(max,n));
+  const changed=n!==state.step;state.step=n;
+  scroller.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',+c.dataset.step===n));
+  document.getElementById('railFill').style.width=(n/max*100)+'%';
+  if(scroll){lock=Date.now()+900;const c=scroller.querySelector(`[data-step="${n}"]`);c&&c.scrollIntoView({behavior:(instant||reduced())?'auto':'smooth',block:'center'});}
+  if(changed||force||scroll){
+    const leg=r.legs[n-1];
+    document.getElementById('live').textContent = leg?`Step ${n}: ${leg.title}, ${MODES[leg.mode].label}, ${fmt(legCost(leg))}`: n===0?`${r.name} overview`:'Route comparison';
+    map && map.focus(n);
+  }
+}
+function setRoute(k){state.route=k;state.step=0;syncToggles();map&&map.buildRoute();renderPanel(false);goToStep(0,{scroll:true,force:true});}
+
+/* ---------------- 3D map ---------------- */
+const INDIA=[[68.4,23.6],[69.5,24.3],[70.8,25.7],[71,27],[72.6,28.4],[73.8,29.9],[74.5,30.9],[74.6,32],[74,33.2],[73.8,34.4],[74.8,35.2],[76.8,35.6],[77.8,35.4],[78.9,34.3],[78.8,33],[79.4,32.4],[78.5,31.2],[80.2,30.4],[81.1,30],[82.1,28.6],[83.4,27.4],[84.7,27.2],[86.1,26.6],[88.1,26.4],[88.1,27.8],[88.8,27.3],[89.8,26.8],[91.7,26.9],[92.1,27.8],[94,28.4],[95.5,29.1],[96.6,28.6],[97.3,28.2],[96.2,27.2],[95.2,26.6],[95,25.4],[94.6,24.6],[94.1,23.8],[93.3,24],[93.1,22.6],[92.6,21.9],[92.2,23.7],[91.6,22.9],[91.2,23.7],[91.9,24.2],[92.4,25],[90.4,25.2],[89.8,25.3],[89,25.9],[88.4,24.6],[89,22.9],[88.9,21.6],[87,21.5],[86.5,20.2],[85,19.3],[84,18.3],[82.3,16.6],[81,15.8],[80.2,15],[80.3,13.3],[79.9,11.5],[79.8,10.3],[79,9.3],[78.2,8.9],[77.5,8.1],[76.6,8.9],[76,10.3],[75.6,11.7],[74.8,12.9],[74.3,14.5],[73.4,16.5],[73,18.5],[72.8,20.5],[72.6,21.4],[72,21],[70.5,20.8],[69,22.4]];
+const TOP=0.62;
+let map=null;
+function initMap(){
+  if(!window.THREE) return null;
+  const host=document.getElementById('stage');
+  let renderer;
+  try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch(e){return null;}
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  host.appendChild(renderer.domElement);
+  const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x070b18,0.012);
+  const camera=new THREE.PerspectiveCamera(45,1,0.05,500);
+  camera.position.set(0,45,40);
+  const controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=.08;controls.minDistance=1.2;controls.maxDistance=90;
+  controls.maxPolarAngle=Math.PI*0.47;controls.screenSpacePanning=true;controls.autoRotateSpeed=.6;
+  const P=(c,y=TOP)=>new THREE.Vector3(c.lon-82,y,-(c.lat-23));
+
+  scene.add(new THREE.AmbientLight(0x8fa3ff,.55));
+  const sun=new THREE.DirectionalLight(0xffffff,.9);sun.position.set(-20,40,20);scene.add(sun);
+  const rim=new THREE.PointLight(0xff7a59,1.2,80);rim.position.set(20,10,-10);scene.add(rim);
+
+  // land
+  const shape=new THREE.Shape();INDIA.forEach(([lo,la],i)=>i?shape.lineTo(lo-82,la-23):shape.moveTo(lo-82,la-23));
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:TOP,bevelEnabled:true,bevelThickness:.08,bevelSize:.12,bevelSegments:2});
+  geo.rotateX(-Math.PI/2);
+  const land=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x1b2a5c,roughness:.75,metalness:.15,emissive:0x0a1236}));
+  scene.add(land);
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geo,30),new THREE.LineBasicMaterial({color:0x6d83d6,transparent:true,opacity:.5}));
+  scene.add(edge);
+  // himalaya
+  const ridge=[[74.6,34.6],[75.8,33.7],[77.3,33.1],[78.4,32],[79.6,31],[81,30],[82.6,29.2],[84.3,28.6],[86,28.2],[87.6,28],[89.4,27.85],[91,27.95],[92.6,28.25],[94.2,28.5],[95.8,28.7]];
+  const mMat=new THREE.MeshStandardMaterial({color:0x2f3f7a,roughness:.9,flatShading:true,emissive:0x0b1335});
+  const snow=new THREE.MeshStandardMaterial({color:0xdfe6ff,roughness:.6,flatShading:true});
+  ridge.forEach(([lo,la],i)=>{for(let j=0;j<3;j++){
+    const h=.5+Math.random()*1.1,r=.35+Math.random()*.3;
+    const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,5),mMat);
+    const p=P({lon:lo+(Math.random()-.5)*1.2,lat:la+Math.random()*.4},TOP+h/2);m.position.copy(p);m.rotation.y=Math.random()*3;scene.add(m);
+    if(h>1.1){const s=new THREE.Mesh(new THREE.ConeGeometry(r*.32,h*.3,5),snow);s.position.set(p.x,TOP+h*.86,p.z);s.rotation.y=m.rotation.y;scene.add(s);}
+  }});
+  // sea grid
+  const grid=new THREE.GridHelper(160,80,0x24346e,0x141d40);grid.position.y=-.02;grid.material.transparent=true;grid.material.opacity=.55;scene.add(grid);
+  // particles
+  const N=1400,pp=new Float32Array(N*3);for(let i=0;i<N;i++){pp[i*3]=(Math.random()-.5)*120;pp[i*3+1]=Math.random()*30+1;pp[i*3+2]=(Math.random()-.5)*120;}
+  const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+  const dust=new THREE.Points(pg,new THREE.PointsMaterial({color:0xaab8ff,size:.09,transparent:true,opacity:.6,depthWrite:false}));scene.add(dust);
+
+  // labels + markers
+  const labelsEl=document.getElementById('labels');
+  const markers={};
+  const ringGeo=new THREE.RingGeometry(.12,.17,40);ringGeo.rotateX(-Math.PI/2);
+  Object.entries(CITIES).forEach(([k,c])=>{
+    const g=new THREE.Group();g.position.copy(P(c));
+    const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.35,12),new THREE.MeshBasicMaterial({color:0xffffff}));pin.position.y=.17;g.add(pin);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.07,16,16),new THREE.MeshBasicMaterial({color:0xffffff}));head.position.y=.36;g.add(head);
+    const ring=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false}));ring.position.y=.01;g.add(ring);
+    scene.add(g);
+    const el=document.createElement('div');el.className='lbl';el.textContent=c.name;labelsEl.appendChild(el);
+    markers[k]={g,ring,head,el,c,phase:Math.random()*6};
+  });
+  const veh=document.createElement('div');veh.className='veh';labelsEl.appendChild(veh);
+  const vehBall=new THREE.Mesh(new THREE.SphereGeometry(.09,16,16),new THREE.MeshBasicMaterial({color:0xffffff}));scene.add(vehBall);
+  const glow=new THREE.PointLight(0xffffff,1.2,3);vehBall.add(glow);
+
+  // route tubes
+  const vtx=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+  const frg=`uniform float uP,uT,uDim,uRep;uniform vec3 uC;varying vec2 vUv;
+    void main(){ if(vUv.x>uP) discard; float d=fract(vUv.x*uRep-uT*1.2);
+      float dash=smoothstep(0.,.08,d)*smoothstep(.55,.45,d);
+      vec3 col=uC*(.6+.9*dash); float a=(.5+.5*dash)*uDim; gl_FragColor=vec4(col,a);}`;
+  let tubes=[];
+  const GROUND=TOP+.045;
+  function curveFor(l){
+    const a=P(CITIES[l.from],GROUND),b=P(CITIES[l.to],GROUND);
+    if(l.mode==='flight'){const d=a.distanceTo(b),mid=a.clone().lerp(b,.5);mid.y+=Math.max(1.2,d*.32);return new THREE.QuadraticBezierCurve3(a,mid,b);}
+    const pts=[a,...(l.via||[]).map(([lo,la])=>P({lon:lo,lat:la},GROUND)),b];
+    return new THREE.CatmullRomCurve3(pts,false,'centripetal');
+  }
+  function buildRoute(){
+    tubes.forEach(t=>{scene.remove(t.mesh);t.mesh.geometry.dispose();t.mesh.material.dispose();});
+    tubes=ROUTES[state.route].legs.map((l,i)=>{
+      const curve=curveFor(l),len=curve.getLength();
+      const g=new THREE.TubeGeometry(curve,Math.max(32,Math.round(len*14)),l.mode==='train'?.065:l.mode==='flight'?.06:.045,8,false);
+      const m=new THREE.ShaderMaterial({vertexShader:vtx,fragmentShader:frg,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+        uniforms:{uP:{value:0},uT:{value:0},uDim:{value:1},uRep:{value:Math.max(2,len*1.6)},uC:{value:new THREE.Color(MODES[l.mode].color)}}});
+      const mesh=new THREE.Mesh(g,m);scene.add(mesh);
+      tween(m.uniforms.uP,{value:1,duration:1.4,delay:.25*i,ease:'power2.inOut'});
+      return {mesh,curve,leg:l,len};
+    });
+    const used=new Set();ROUTES[state.route].legs.forEach(l=>{used.add(l.from);used.add(l.to);l.mid&&used.add(l.mid)});
+    Object.entries(markers).forEach(([k,m])=>{m.g.visible=used.has(k);m.el.style.display=used.has(k)?'':'none';});
+  }
+  let active=-1,legStart=performance.now();
+  function frame(points,tight){
+    const box=new THREE.Box3();points.forEach(p=>box.expandByPoint(p));
+    const c=box.getCenter(new THREE.Vector3()),s=box.getSize(new THREE.Vector3());
+    let span=Math.max(s.x,s.z,tight?.5:4);
+    const aspect=renderer.domElement.clientWidth/Math.max(1,renderer.domElement.clientHeight);
+    let dist=span*1.25+(tight?1.6:4);if(aspect<1)dist/=Math.max(.45,aspect);
+    // shift centre so panel doesn't cover it on desktop
+    const off = innerWidth>900 ? span*.18 : 0;
+    const narrow = innerWidth<=900;
+    const target=new THREE.Vector3(c.x+off,TOP,c.z + (narrow?span*.25:0));
+    const pos=new THREE.Vector3(target.x-dist*.12,TOP+dist*.78,target.z+dist*.62);
+    return {pos,target};
+  }
+  function fly({pos,target}){
+    const dur=reduced()?0:1.6;
+    if(hasGsap&&dur){gsap.to(camera.position,{x:pos.x,y:pos.y,z:pos.z,duration:dur,ease:'power3.inOut'});
+      gsap.to(controls.target,{x:target.x,y:target.y,z:target.z,duration:dur,ease:'power3.inOut',onUpdate:()=>controls.update()});}
+    else{camera.position.copy(pos);controls.target.copy(target);controls.update();}
+  }
+  function focus(n){
+    const legs=ROUTES[state.route].legs;
+    active = (n>=1&&n<=legs.length)? n-1 : -1; legStart=performance.now();
+    tubes.forEach((t,i)=>tween(t.mesh.material.uniforms.uDim,{value:(active<0||i===active)?1:.22,duration:.6}));
+    Object.values(markers).forEach(m=>{m.el.classList.remove('on','dim');});
+    if(active>=0){
+      const l=legs[active];markers[l.from].el.classList.add('on');markers[l.to].el.classList.add('on');
+      Object.entries(markers).forEach(([k,m])=>{if(k!==l.from&&k!==l.to)m.el.classList.add('dim')});
+      veh.textContent=MODES[l.mode].icon;vehBall.material.color.set(MODES[l.mode].color);glow.color.set(MODES[l.mode].color);
+      const tb=tubes[active];fly(frame(tb?tb.curve.getPoints(24).map(p=>p.setY(TOP)):[P(CITIES[l.from]),P(CITIES[l.to])],!tb||tb.len<3));
+    }else{
+      const pts=[];legs.forEach(l=>{pts.push(P(CITIES[l.from]),P(CITIES[l.to]))});fly(frame(pts,false));
+    }
+  }
+  function home(){focus(state.step);}
+  function zoom(f){const dir=camera.position.clone().sub(controls.target);const len=THREE.MathUtils.clamp(dir.length()*f,controls.minDistance,controls.maxDistance);
+    const np=controls.target.clone().add(dir.setLength(len));tween(camera.position,{x:np.x,y:np.y,z:np.z,duration:.5,ease:'power2.out'});}
+
+  const v=new THREE.Vector3(),clock=new THREE.Clock();
+  function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  addEventListener('resize',resize);resize();
+  function loop(){
+    requestAnimationFrame(loop);if(document.hidden)return;
+    const t=clock.getElapsedTime(),rm=reduced();
+    controls.update();
+    tubes.forEach(tb=>tb.mesh.material.uniforms.uT.value=rm?0:t);
+    if(!rm) dust.rotation.y=t*.01;
+    Object.values(markers).forEach(m=>{const s=1+((t*.8+m.phase)%1)*2.4;m.ring.scale.setScalar(rm?1.5:s);m.ring.material.opacity=rm?.5:.8*(1-((t*.8+m.phase)%1));});
+    const W=innerWidth,H=innerHeight,dist=camera.position.distanceTo(controls.target);
+    const sc=THREE.MathUtils.clamp(dist/14,.35,6);
+    Object.values(markers).forEach(m=>{m.g.scale.setScalar(sc);
+      v.copy(m.g.position);v.y+=.45*sc;v.project(camera);
+      const vis=v.z<1&&m.g.visible;m.el.style.opacity=vis?'':'0';
+      if(vis){const x=(v.x*.5+.5)*W+(m.c.dx||0),y=(-v.y*.5+.5)*H+(m.c.dy||0);m.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-140%)`;}
+    });
+    if(active>=0&&tubes[active]){
+      const ms=THREE.MathUtils.clamp(tubes[active].len*140,2600,9000),per=rm?0:((performance.now()-legStart)/ms)%1;
+      const p=tubes[active].curve.getPoint(rm?.5:per);vehBall.position.copy(p);vehBall.visible=true;vehBall.scale.setScalar(sc);
+      v.copy(p).project(camera);veh.style.opacity=v.z<1?'1':'0';
+      veh.style.transform=`translate(${(v.x*.5+.5)*W}px,${(-v.y*.5+.5)*H}px) translate(-50%,-115%)`;
+    }else{vehBall.visible=false;veh.style.opacity='0';}
+    renderer.render(scene,camera);
+  }
+  loop();
+  renderer.domElement.addEventListener('pointerdown',()=>stopTour());
+  return {buildRoute,focus,home,zoom,controls};
+}
+
+/* ---------------- ambient music (generated live with Web Audio) ---------------- */
+const Music=(()=>{
+  let ctx,master,bus,timer,on=false,idx=0,next=0;const DUR=8;
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+  const chords=[[57,64,67,71,74],[53,60,64,69,72],[48,55,62,64,67],[55,62,66,69,71]];
+  const scale=[69,71,72,74,76,79,81,83,86];
+  function build(){
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();master.gain.value=0;bus=ctx.createGain();
+    const rev=ctx.createConvolver(),len=Math.floor(ctx.sampleRate*3.8),buf=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}
+    rev.buffer=buf;const wet=ctx.createGain();wet.gain.value=.6;const dry=ctx.createGain();dry.gain.value=.5;
+    bus.connect(dry);bus.connect(rev);rev.connect(wet);dry.connect(master);wet.connect(master);
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);
+  }
+  function chord(notes,t){
+    notes.forEach((n,i)=>[-7,7].forEach(det=>{
+      const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+      o.type=i%2?'triangle':'sine';o.frequency.value=mtof(n);o.detune.value=det;
+      f.type='lowpass';f.frequency.setValueAtTime(500,t);f.frequency.linearRampToValueAtTime(1100,t+DUR/2);f.frequency.linearRampToValueAtTime(600,t+DUR);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.032,t+2.6);g.gain.setValueAtTime(.032,t+DUR-1.5);g.gain.linearRampToValueAtTime(0,t+DUR+2);
+      o.connect(f);f.connect(g);g.connect(bus);o.start(t);o.stop(t+DUR+2.2);
+    }));
+    const b=ctx.createOscillator(),bg=ctx.createGain();b.type='sine';b.frequency.value=mtof(notes[0]-12);
+    bg.gain.setValueAtTime(0,t);bg.gain.linearRampToValueAtTime(.07,t+1.8);bg.gain.linearRampToValueAtTime(0,t+DUR+1);
+    b.connect(bg);bg.connect(bus);b.start(t);b.stop(t+DUR+1.2);
+    for(let k=0;k<5;k++){if(Math.random()<.6){
+      const pt=t+.6+Math.random()*(DUR-1.5),o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=mtof(scale[Math.floor(Math.random()*scale.length)]);
+      g.gain.setValueAtTime(0,pt);g.gain.linearRampToValueAtTime(.045,pt+.015);g.gain.exponentialRampToValueAtTime(.0001,pt+3);
+      o.connect(g);g.connect(bus);o.start(pt);o.stop(pt+3.1);
+    }}
+  }
+  function sched(){if(!on)return;while(next<ctx.currentTime+DUR*1.2){chord(chords[idx%chords.length],next);idx++;next+=DUR;}}
+  function set(v){
+    try{if(!ctx)build();if(ctx.state==='suspended')ctx.resume();}catch(e){return false;}
+    on=v;const t=ctx.currentTime;master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);
+    master.gain.linearRampToValueAtTime(on?.85:0,t+(on?2.5:1.2));
+    clearInterval(timer);if(on){if(next<t)next=t+.05;sched();timer=setInterval(sched,1500);}
+    return on;
+  }
+  document.addEventListener('visibilitychange',()=>{if(!ctx)return;document.hidden?ctx.suspend():on&&ctx.resume();});
+  return {toggle:()=>set(!on),get on(){return on}};
+})();
+const musicBtn=document.getElementById('music');
+function toggleMusic(){const v=Music.toggle();musicBtn.setAttribute('aria-pressed',v);musicBtn.textContent=v?'♫':'♪';musicBtn.setAttribute('aria-label',v?'Turn ambient music off':'Turn ambient music on');}
+musicBtn.onclick=toggleMusic;
+
+/* ---------------- tour + controls ---------------- */
+let tourT=null;const playBtn=document.getElementById('play');
+function stopTour(){if(tourT){clearInterval(tourT);tourT=null;playBtn.setAttribute('aria-pressed','false');playBtn.textContent='▶';}}
+function startTour(){stopTour();if(state.step>=ROUTES[state.route].legs.length+1)goToStep(0,{scroll:true});
+  playBtn.setAttribute('aria-pressed','true');playBtn.textContent='❚❚';
+  tourT=setInterval(()=>{const max=ROUTES[state.route].legs.length+1;if(state.step>=max){stopTour();return;}goToStep(state.step+1,{scroll:true});},4200);}
+playBtn.onclick=()=>tourT?stopTour():startTour();
+document.getElementById('next').onclick=()=>{stopTour();goToStep(state.step+1,{scroll:true})};
+document.getElementById('prev').onclick=()=>{stopTour();goToStep(state.step-1,{scroll:true})};
+document.getElementById('zin').onclick=()=>map&&map.zoom(.7);
+document.getElementById('zout').onclick=()=>map&&map.zoom(1.4);
+document.getElementById('reset').onclick=()=>map&&map.home();
+const spinBtn=document.getElementById('spin');
+spinBtn.onclick=()=>{if(!map)return;const on=!map.controls.autoRotate;map.controls.autoRotate=on&&!reduced();spinBtn.setAttribute('aria-pressed',on);};
+addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  if(e.key==='ArrowRight'){stopTour();goToStep(state.step+1,{scroll:true});e.preventDefault();}
+  else if(e.key==='ArrowLeft'){stopTour();goToStep(state.step-1,{scroll:true});e.preventDefault();}
+  else if(e.key==='+'||e.key==='='){map&&map.zoom(.7);}
+  else if(e.key==='-'||e.key==='_'){map&&map.zoom(1.4);}
+  else if(e.key==='0'){map&&map.home();}
+  else if(e.key==='m'||e.key==='M'){toggleMusic();}
+  else if(e.key===' '&&!e.target.closest('button')){e.preventDefault();tourT?stopTour():startTour();}
+});
+
+/* ---------------- boot ---------------- */
+try{map=initMap();}catch(e){map=null;}
+if(!map) document.documentElement.classList.add('no-webgl');
+else map.buildRoute();
+syncToggles();renderPanel(false);
+requestAnimationFrame(()=>goToStep(0,{scroll:true,force:true,instant:true}));
+setTimeout(()=>document.getElementById('preload').classList.add('gone'),500);
+})();
+</script>
+</body>
+</html>
