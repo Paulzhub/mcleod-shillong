@@ -102,6 +102,10 @@ aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:v
 .legend i{display:inline-block;width:18px;height:4px;border-radius:3px;margin-right:6px;vertical-align:middle}
 .disclaim{font-size:11px;color:var(--muted);opacity:.8}
 
+#soundHint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:var(--z-modal);padding:12px 18px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:8px;animation:pulse 2s ease-in-out infinite}
+#soundHint.show{display:flex}
+@keyframes pulse{50%{box-shadow:0 0 0 10px rgba(246,196,83,.15)}}
+@media (max-width:900px){#soundHint{top:38%}}
 #nowebgl{display:none;position:fixed;left:14px;top:50%;max-width:340px;padding:16px;z-index:var(--z-ui)}
 .no-webgl #nowebgl{display:block}
 
@@ -186,6 +190,7 @@ aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:v
 </div>
 
 <div id="nowebgl" class="glass"><b>3D map unavailable.</b><p style="color:var(--muted);font-size:13px">Your browser couldn't start WebGL. The step-by-step guide and all costs still work in the panel.</p></div>
+<button id="soundHint" class="glass" type="button">🔊 Tap anywhere to turn on the music</button>
 <div class="sr" aria-live="polite" id="live"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -523,7 +528,7 @@ function initMap(){
     renderer.render(scene,camera);
   }
   loop();
-  renderer.domElement.addEventListener('pointerdown',()=>stopTour());
+  renderer.domElement.addEventListener('pointerdown',()=>{if(window.__unlocking)return;stopTour();});
   return {buildRoute,focus,home,zoom,controls};
 }
 
@@ -569,10 +574,10 @@ const Music=(()=>{
     return on;
   }
   document.addEventListener('visibilitychange',()=>{if(!ctx)return;document.hidden?ctx.suspend():on&&ctx.resume();});
-  return {toggle:()=>set(!on),get on(){return on}};
+  return {toggle:()=>set(!on),get on(){return on},get running(){return !!ctx&&ctx.state==='running'},resume(){try{ctx&&ctx.resume()}catch(e){}}};
 })();
 const musicBtn=document.getElementById('music');
-function toggleMusic(){const v=Music.toggle();musicBtn.setAttribute('aria-pressed',v);musicBtn.textContent=v?'♫':'♪';musicBtn.setAttribute('aria-label',v?'Turn ambient music off':'Turn ambient music on');}
+function toggleMusic(){if(window.__skipToggle){window.__skipToggle=false;return;}const v=Music.toggle();musicBtn.setAttribute('aria-pressed',v);musicBtn.textContent=v?'♫':'♪';musicBtn.setAttribute('aria-label',v?'Turn ambient music off':'Turn ambient music on');}
 musicBtn.onclick=toggleMusic;
 
 /* ---------------- tour + controls ---------------- */
@@ -580,7 +585,7 @@ let tourT=null;const playBtn=document.getElementById('play');
 function stopTour(){if(tourT){clearInterval(tourT);tourT=null;playBtn.setAttribute('aria-pressed','false');playBtn.textContent='▶';}}
 function startTour(){stopTour();if(state.step>=ROUTES[state.route].legs.length+1)goToStep(0,{scroll:true});
   playBtn.setAttribute('aria-pressed','true');playBtn.textContent='❚❚';
-  tourT=setInterval(()=>{const max=ROUTES[state.route].legs.length+1;if(state.step>=max){stopTour();return;}goToStep(state.step+1,{scroll:true});},4200);}
+  tourT=setInterval(()=>{const max=ROUTES[state.route].legs.length+1;goToStep(state.step>=max?0:state.step+1,{scroll:true});},5200);}
 playBtn.onclick=()=>tourT?stopTour():startTour();
 document.getElementById('next').onclick=()=>{stopTour();goToStep(state.step+1,{scroll:true})};
 document.getElementById('prev').onclick=()=>{stopTour();goToStep(state.step-1,{scroll:true})};
@@ -607,6 +612,28 @@ else map.buildRoute();
 syncToggles();renderPanel(false);
 requestAnimationFrame(()=>goToStep(0,{scroll:true,force:true,instant:true}));
 setTimeout(()=>document.getElementById('preload').classList.add('gone'),500);
+// autoplay: guided tour + music. Browsers block sound until the first tap/key, so unlock on that gesture.
+const hint=document.getElementById('soundHint');
+function syncMusicUI(){const v=Music.on;musicBtn.setAttribute('aria-pressed',v);musicBtn.textContent=v?'♫':'♪';musicBtn.setAttribute('aria-label',v?'Turn ambient music off':'Turn ambient music on');}
+setTimeout(()=>{
+  if(!reduced()) startTour();
+  if(!Music.on) Music.toggle();
+  syncMusicUI();
+  setTimeout(()=>{
+    if(Music.running) return;
+    hint.classList.add('show');
+    const unlock=e=>{
+      window.__unlocking=true;setTimeout(()=>window.__unlocking=false,0);
+      // a tap on ♪ or the M key here means "I want sound": resume it instead of toggling it off
+      window.__skipToggle = e.target===musicBtn || (e.type==='keydown'&&(e.key==='m'||e.key==='M'));
+      Music.resume();hint.classList.remove('show');cleanup();
+    };
+    const evs=['pointerdown','keydown','touchstart'];
+    function cleanup(){evs.forEach(ev=>removeEventListener(ev,unlock,true));}
+    evs.forEach(ev=>addEventListener(ev,unlock,true));
+  },400);
+},900);
+hint.addEventListener('click',()=>hint.classList.remove('show'));
 })();
 </script>
 </body>
