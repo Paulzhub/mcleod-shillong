@@ -117,19 +117,55 @@ aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:v
 #preload p{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+#collapse{display:none}
 @media (max-width:900px){
-  header.top{right:14px;top:10px;left:10px;right:10px;padding:10px}
+  header.top{top:8px;left:8px;right:8px;padding:8px 10px;gap:6px}
   .brand{min-width:0;width:100%}
-  aside.panel{top:auto;left:10px;right:10px;bottom:10px;width:auto;height:44vh}
-  .panel-head{padding:10px 14px 8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .total{font-size:24px;margin:0}
-  .rail{flex-basis:100%;margin-top:4px}
-  .scroller{padding-bottom:30vh}
-  .hud{bottom:calc(44vh + 20px);left:10px}
+  .brand h1{font-size:16px}.brand p{display:none}
+  .seg{padding:3px}.seg button{min-height:32px;padding:6px 10px;font-size:12px}
+  .seglbl{font-size:10px;padding:0 4px 0 6px}
+  .lbltxt{display:none}
+  aside.panel{top:auto;left:8px;right:8px;bottom:8px;width:auto;height:auto;max-height:40vh}
+  .panel-head{padding:8px 12px;display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+  .panel-head .k{flex:1 1 60%;font-size:10px;letter-spacing:.08em;order:1}
+  .total{font-size:20px;margin:0;order:2}
+  #collapse{display:grid;order:3;width:36px;height:36px;font-size:14px}
+  .rail{flex-basis:100%;margin-top:0;order:4}
+  .scroller{display:flex;align-items:flex-start;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:8px 7%;flex:0 1 auto}
+  .panel-head .k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card{flex:0 0 86%;margin:0;padding:12px 14px;max-height:calc(40vh - 78px);overflow-y:auto;transform:scale(.96)}
+  .card .num{display:none}
+  .card h2{font-size:15px}.card p{font-size:12.5px;margin:4px 0}
+  .stats{margin:8px 0 4px;gap:6px}.stat{padding:7px 10px}.stat b{font-size:16px}
+  .mode{margin-bottom:6px}.note{margin-top:6px}.hint{display:none}
+  .panel.collapsed .scroller{display:none}
+  .panel.collapsed #collapse{transform:rotate(180deg)}
+  .hud{left:8px;right:8px;bottom:calc(var(--ph,40vh) + 14px)}
+  .ctrls{gap:4px;padding:4px;flex-wrap:nowrap;overflow-x:auto;max-width:100%}
+  .btn{width:36px;height:36px;font-size:15px;flex:0 0 auto;border-radius:10px}
   .legend,.disclaim{display:none}
-  .ctrls{flex-direction:row}
+  .lbl{font-size:11px;padding:5px 8px}
 }
-@media (max-width:420px){.seg button{padding:7px 9px;font-size:12px}.brand p{display:none}.btn{width:38px;height:38px;font-size:16px}.ctrls{gap:4px;padding:4px;flex-wrap:wrap;max-width:calc(100vw - 20px)}.seglbl{padding:0 4px 0 6px}}
+/* phones in landscape: steps panel on the right, map on the left */
+@media (max-height:500px){
+  header.top{top:6px;left:6px;right:calc(min(340px,42vw) + 14px);padding:6px 8px;gap:5px}
+  .brand{display:none}
+  .seg{padding:3px}.seg button{min-height:30px;padding:5px 9px;font-size:12px}
+  .lbltxt{display:none}
+  aside.panel{top:6px;bottom:6px;right:6px;left:auto;width:min(340px,42vw);height:auto;max-height:none}
+  .panel-head{padding:8px 12px;display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap}
+  .panel-head .k{flex:1 1 60%;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .total{font-size:20px;margin:0}
+  .rail{flex-basis:100%;margin-top:0}
+  #collapse{display:none}
+  .scroller{display:block;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;padding:8px 8px 40vh}
+  .card{flex:none;margin:0 0 8px;max-height:none;padding:10px 12px}
+  .card .num,.hint{display:none}
+  .card h2{font-size:14px}.card p{font-size:12px}.stat b{font-size:15px}.stats{margin:6px 0}
+  .hud{left:6px;right:auto;bottom:6px}
+  .ctrls{gap:3px;padding:3px}.btn{width:34px;height:34px;font-size:14px}
+  .legend{display:none}
+}
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .word{opacity:1;transform:none}
@@ -150,7 +186,7 @@ aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:v
   </div>
   <div class="seg" role="tablist" aria-label="Choose route" id="routeTabs"></div>
   <div class="seg" role="group" aria-label="Train class" id="clsSeg">
-    <span class="seglbl" aria-hidden="true">🚆 Train class</span>
+    <span class="seglbl" aria-hidden="true">🚆<span class="lbltxt"> Train class</span></span>
     <button data-cls="sl" aria-pressed="true" aria-label="Train: Sleeper class">Sleeper</button>
     <button data-cls="ac" aria-pressed="false" aria-label="Train: 3AC class">3AC</button>
   </div>
@@ -165,6 +201,7 @@ aside.panel{position:fixed;top:14px;right:14px;bottom:14px;width:380px;z-index:v
     <div class="k" id="totalLabel">Return total · Sleeper</div>
     <div class="total" id="total">₹0</div>
     <div class="rail" aria-hidden="true"><i id="railFill"></i></div>
+    <button class="btn" id="collapse" aria-label="Hide trip steps" aria-expanded="true" title="Show/hide steps">▾</button>
   </div>
   <div class="scroller" id="scroller" tabindex="0" aria-label="Scroll through the journey"></div>
 </aside>
@@ -362,7 +399,7 @@ function goToStep(n,{scroll=false,instant=false,force=false}={}){
   const changed=n!==state.step;state.step=n;
   scroller.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',+c.dataset.step===n));
   document.getElementById('railFill').style.width=(n/max*100)+'%';
-  if(scroll){lock=Date.now()+900;const c=scroller.querySelector(`[data-step="${n}"]`);c&&c.scrollIntoView({behavior:(instant||reduced())?'auto':'smooth',block:'center'});}
+  if(scroll){lock=Date.now()+900;const c=scroller.querySelector(`[data-step="${n}"]`);if(c){const mob=innerWidth<=900&&innerHeight>500;if(mob){scroller.scrollTo({left:c.offsetLeft-(scroller.clientWidth-c.offsetWidth)/2,behavior:(instant||reduced())?'auto':'smooth'});}else c.scrollIntoView({behavior:(instant||reduced())?'auto':'smooth',block:'center'});}}
   if(changed||force||scroll){
     const leg=r.legs[n-1];
     document.getElementById('live').textContent = leg?`Step ${n}: ${leg.title}, ${MODES[leg.mode].label}, ${fmt(legCost(leg))}`: n===0?`${r.name} overview`:'Route comparison';
@@ -370,6 +407,22 @@ function goToStep(n,{scroll=false,instant=false,force=false}={}){
   }
 }
 function setRoute(k){state.route=k;state.step=0;syncToggles();map&&map.buildRoute();renderPanel(false);goToStep(0,{scroll:true,force:true});}
+
+/* ---------------- layout: which part of the screen the map can use ---------------- */
+const panelEl=document.querySelector('aside.panel'),headerEl=document.querySelector('header.top'),hudEl=document.querySelector('.hud');
+function freeRect(){
+  const W=innerWidth,H=innerHeight,hd=headerEl.getBoundingClientRect(),pn=panelEl.getBoundingClientRect();
+  let top=hd.bottom+6,left=0,right=W,bottom=H;
+  if(W>900||H<=500) right=pn.left-6;
+  if(W<=900||H<=500) bottom=hudEl.getBoundingClientRect().top-4;
+  if(bottom-top<120){top=Math.max(0,bottom-120);}
+  return {left,top,right,bottom,w:Math.max(80,right-left),h:Math.max(80,bottom-top),cx:(left+right)/2,cy:(top+bottom)/2};
+}
+let relayT;
+function relayout(){document.documentElement.style.setProperty('--ph',panelEl.offsetHeight+'px');clearTimeout(relayT);relayT=setTimeout(()=>map&&map.relayout(),120);}
+if(window.ResizeObserver){const ro=new ResizeObserver(relayout);ro.observe(panelEl);ro.observe(headerEl);}
+addEventListener('resize',relayout);
+document.getElementById('collapse').onclick=()=>{const c=panelEl.classList.toggle('collapsed');const b=document.getElementById('collapse');b.setAttribute('aria-expanded',!c);b.setAttribute('aria-label',c?'Show trip steps':'Hide trip steps');};
 
 /* ---------------- 3D map ---------------- */
 const INDIA=[[68.4,23.6],[69.5,24.3],[70.8,25.7],[71,27],[72.6,28.4],[73.8,29.9],[74.5,30.9],[74.6,32],[74,33.2],[73.8,34.4],[74.8,35.2],[76.8,35.6],[77.8,35.4],[78.9,34.3],[78.8,33],[79.4,32.4],[78.5,31.2],[80.2,30.4],[81.1,30],[82.1,28.6],[83.4,27.4],[84.7,27.2],[86.1,26.6],[88.1,26.4],[88.1,27.8],[88.8,27.3],[89.8,26.8],[91.7,26.9],[92.1,27.8],[94,28.4],[95.5,29.1],[96.6,28.6],[97.3,28.2],[96.2,27.2],[95.2,26.6],[95,25.4],[94.6,24.6],[94.1,23.8],[93.3,24],[93.1,22.6],[92.6,21.9],[92.2,23.7],[91.6,22.9],[91.2,23.7],[91.9,24.2],[92.4,25],[90.4,25.2],[89.8,25.3],[89,25.9],[88.4,24.6],[89,22.9],[88.9,21.6],[87,21.5],[86.5,20.2],[85,19.3],[84,18.3],[82.3,16.6],[81,15.8],[80.2,15],[80.3,13.3],[79.9,11.5],[79.8,10.3],[79,9.3],[78.2,8.9],[77.5,8.1],[76.6,8.9],[76,10.3],[75.6,11.7],[74.8,12.9],[74.3,14.5],[73.4,16.5],[73,18.5],[72.8,20.5],[72.6,21.4],[72,21],[70.5,20.8],[69,22.4]];
@@ -468,13 +521,12 @@ function initMap(){
   function frame(points,tight){
     const box=new THREE.Box3();points.forEach(p=>box.expandByPoint(p));
     const c=box.getCenter(new THREE.Vector3()),s=box.getSize(new THREE.Vector3());
-    let span=Math.max(s.x,s.z,tight?.5:4);
-    const aspect=renderer.domElement.clientWidth/Math.max(1,renderer.domElement.clientHeight);
-    let dist=span*1.25+(tight?1.6:4);if(aspect<1)dist/=Math.max(.45,aspect);
-    // shift centre so panel doesn't cover it on desktop
-    const off = innerWidth>900 ? span*.18 : 0;
-    const narrow = innerWidth<=900;
-    const target=new THREE.Vector3(c.x+off,TOP,c.z + (narrow?span*.25:0));
+    const min=tight?.6:3,sx=Math.max(s.x,min),sz=Math.max(s.z,min);
+    const W=innerWidth,H=innerHeight,f=freeRect(),k=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+    // distance so the box fits inside the visible (uncovered) part of the screen
+    const dH=sz*(H/f.h)/k*.9, dW=sx*(W/f.w)/(k*(W/H))*((W<=900||H<=500)?1.35:1.1);
+    const dist=Math.min(85,Math.max(dH,dW)*1.12+(tight?.9:1.5));
+    const target=new THREE.Vector3(c.x,TOP,c.z);
     const pos=new THREE.Vector3(target.x-dist*.12,TOP+dist*.78,target.z+dist*.62);
     return {pos,target};
   }
@@ -503,7 +555,10 @@ function initMap(){
     const np=controls.target.clone().add(dir.setLength(len));tween(camera.position,{x:np.x,y:np.y,z:np.z,duration:.5,ease:'power2.out'});}
 
   const v=new THREE.Vector3(),clock=new THREE.Clock();
-  function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  function applyOffset(){const W=host.clientWidth,H=host.clientHeight,f=freeRect();
+    // shift the projection centre into the uncovered part of the screen
+    camera.setViewOffset(W,H,Math.round(W/2-f.cx),Math.round(H/2-f.cy),W,H);camera.updateProjectionMatrix();}
+  function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;applyOffset();}
   addEventListener('resize',resize);resize();
   function loop(){
     requestAnimationFrame(loop);if(document.hidden)return;
@@ -529,7 +584,7 @@ function initMap(){
   }
   loop();
   renderer.domElement.addEventListener('pointerdown',()=>{if(window.__unlocking)return;stopTour();});
-  return {buildRoute,focus,home,zoom,controls};
+  return {buildRoute,focus,home,zoom,controls,relayout(){resize();focus(state.step);}};
 }
 
 /* ---------------- ambient music (generated live with Web Audio) ---------------- */
@@ -609,7 +664,7 @@ addEventListener('keydown',e=>{
 try{map=initMap();}catch(e){map=null;}
 if(!map) document.documentElement.classList.add('no-webgl');
 else map.buildRoute();
-syncToggles();renderPanel(false);
+syncToggles();renderPanel(false);relayout();
 requestAnimationFrame(()=>goToStep(0,{scroll:true,force:true,instant:true}));
 setTimeout(()=>document.getElementById('preload').classList.add('gone'),500);
 // autoplay: guided tour + music. Browsers block sound until the first tap/key, so unlock on that gesture.
